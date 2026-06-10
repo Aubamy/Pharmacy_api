@@ -156,6 +156,13 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.post('/api/logout', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Logout successful"
+  });
+});
+
 app.put('/edit-profile', auth, async (req, res) => {
   try {
     const fullName = req.body?.fullName;
@@ -246,6 +253,40 @@ app.put('/edit-products/:id', auth, adminOnly, async (req, res) => {
     return res.status(500).json({
       message: 'Server error',
       error: error.message
+    });
+  }
+});
+
+
+app.delete('/api/admin/products/:id', auth, async (req, res) => {
+  try {
+
+    // 1. check admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Access denied'
+      });
+    }
+
+    // 2. find product
+    const product = await Product.findByPk(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        message: 'Product not found'
+      });
+    }
+
+    // 3. delete product
+    await product.destroy();
+
+    res.json({
+      message: 'Product deleted successfully'
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
     });
   }
 });
@@ -402,6 +443,182 @@ app.post('/checkout', auth, async (req, res) => {
   } catch (err) {
     console.log(err);
     res.status(500).send('Server error');
+  }
+});
+
+
+app.get('/api/admin/orders', auth, async (req, res) => {
+  try {
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Access denied'
+      });
+    }
+
+    const orders = await Order.findAll();
+
+    res.json(orders);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+});
+
+app.get('/api/admin/orders/:id', auth, async (req, res) => {
+  try {
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Access denied'
+      });
+    }
+
+    const order = await Order.findByPk(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        message: 'Order not found'
+      });
+    }
+
+    res.json(order);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+});
+
+app.put('/api/admin/orders/:id/status', auth, async (req, res) => {
+  try {
+
+    // 1. check admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Access denied'
+      });
+    }
+
+    const { status } = req.body;
+
+    // 2. validate status
+    const allowedStatus = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({
+        message: 'Invalid status value'
+      });
+    }
+
+    // 3. find order
+    const order = await Order.findByPk(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        message: 'Order not found'
+      });
+    }
+
+    // 4. update status
+    order.status = status;
+    await order.save();
+
+    res.json({
+      message: 'Order status updated successfully',
+      order
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+});
+
+
+app.get('/api/admin/users', auth, async (req, res) => {
+  try {
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Access denied'
+      });
+    }
+
+    const users = await User.findAll();
+
+    res.json(users);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+});
+
+app.get('/api/admin/products', auth, async (req, res) => {
+  try {
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Access denied'
+      });
+    }
+
+    const products = await Product.findAll();
+
+    res.json(products);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+});
+
+app.get('/api/admin/dashboard', auth, async (req, res) => {
+  try {
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // 1. total users
+    const totalUsers = await User.count();
+
+    // 2. total orders
+    const totalOrders = await Order.count();
+
+    // 3. total products
+    const totalProducts = await Product.count();
+
+    // 4. total sales (sum of all orders)
+    const totalSales = await Order.sum('totalAmount');
+
+    // 5. total available stock
+    const products = await Product.findAll();
+
+    let totalStock = 0;
+    products.forEach(p => {
+      totalStock += p.quantity;
+    });
+
+    res.json({
+      totalUsers,
+      totalOrders,
+      totalProducts,
+      totalSales,
+      totalStock
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
   }
 });
 
