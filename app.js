@@ -11,7 +11,10 @@ const { Sequelize } = require('sequelize');
 // const sequelize = require('./config/database');
 const { sequelize } = require('./config/database');
 const { connectDB } = require('./config/database');
+// const upload = require('./config/multer');
+const uploadToCloudinary = require('./utils/uploadToCloudinary');
 const auth = require('./middleware/auth');
+const upload = require('./middleware/uploadMiddleware');
 const Order = require('./models/Order');
 const OrderItem = require('./models/OrderItem');
 const User = require('./models/User');
@@ -199,15 +202,65 @@ app.put('/edit-profile', auth, async (req, res) => {
   }
 });
 
-app.post('/add-products', auth, adminOnly, async (req, res) => {
+// app.post('/add-products', auth, adminOnly, upload.single('image'), async (req, res) => {
+//   try {
+
+//     const schema = Joi.object({
+//       productName: Joi.string().required(),
+//       description: Joi.string().required(),
+//       price: Joi.number().required(),
+//       quantity: Joi.number().required(),
+//       category: Joi.string().required()
+//     });
+
+//     const { error } = schema.validate(req.body);
+//     if (error) return res.status(400).send(error.details[0].message);
+
+//     // let imageUrl = '';
+
+//     // if (req.file) {
+//     //   const result = await uploadToCloudinary(req.file.buffer);
+//     //   imageUrl = result.secure_url;
+//     // }
+//     if (!req.file) {
+//       return res.status(400).json({
+//         message: "Recipe image is required",
+//       });
+//     }
+
+
+//     const image = req.file
+//       ? req.file.path
+//       : null;
+
+//     const product = await Product.create({
+//       ...req.body,
+//       image,
+//     });
+//     // const product = await Product.create({
+
+//     // });
+
+//     res.status(201).json({
+//       message: 'Product added successfully',
+//       product
+//     });
+
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).send('Server error');
+//   }
+// });
+
+app.post('/add-products', auth, adminOnly, upload.single('image'), async (req, res) => {
   try {
+
     const schema = Joi.object({
       productName: Joi.string().required(),
       description: Joi.string().required(),
       price: Joi.number().required(),
       quantity: Joi.number().required(),
-      category: Joi.string().required(),
-      image: Joi.string().allow('')
+      category: Joi.string().required()
     });
 
     const { error } = schema.validate(req.body);
@@ -216,20 +269,35 @@ app.post('/add-products', auth, adminOnly, async (req, res) => {
       return res.status(400).send(error.details[0].message);
     }
 
-    const product = await Product.create(req.body);
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Product image is required"
+      });
+    }
+
+    const result = await uploadToCloudinary(req.file.buffer);
+
+    const product = await Product.create({
+      productName: req.body.productName,
+      description: req.body.description,
+      price: req.body.price,
+      quantity: req.body.quantity,
+      category: req.body.category,
+      image: result.secure_url
+    });
 
     res.status(201).json({
-      message: 'Product added Successfully',
+      message: "Product added successfully",
       product
     });
 
   } catch (err) {
     console.log(err);
-    res.status(500).send('Server error');
+    res.status(500).send("Server error");
   }
 });
 
-app.put('/edit-products/:id', auth, adminOnly, async (req, res) => {
+app.put('/edit-products/:id', auth, adminOnly, upload.single('image'), async (req, res) => {
   try {
     const id = req.params.id;
 
