@@ -61,6 +61,72 @@ const adminOnly = (req, res, next) => {
   }
 };
 
+const protect = async (req, res, next) => {
+
+  try {
+
+    let token;
+
+    // Check for authorization header
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+
+      token = req.headers.authorization.split(" ")[1];
+
+    }
+
+    // No token
+    if (!token) {
+
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized, no token",
+      });
+
+    }
+
+    // Verify token
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+
+    // Find user
+    const user = await User.findByPk(decoded.id, {
+      attributes: { exclude: ["password"] },
+    });
+
+    // User not found
+    if (!user) {
+
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+
+    }
+
+    // Attach user to request
+    req.user = user;
+
+    next();
+
+  } catch (error) {
+
+    return res.status(401).json({
+      success: false,
+      message: "Token failed",
+      error: error.message,
+    });
+
+  }
+
+};
+
+
+
 app.get('/', (req, res) => {
   res.send("Welcome to Diamon Pharmacy");
 });
@@ -160,6 +226,27 @@ app.post('/login', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
+app.get('/me', protect, async (req, res) => {
+
+  try {
+
+    const user = await User.findByPk(req.user.id, {
+      attributes: { exclude: ["password"] },
+    });
+
+    res.json(user);
+
+  } catch (error) {
+
+    res.status(500).json({
+      error: error.message,
+    });
+
+  }
+}
+
+)
 
 app.post('/api/logout', (req, res) => {
   res.status(200).json({
