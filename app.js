@@ -248,6 +248,8 @@ app.get('/me', protect, async (req, res) => {
 
 )
 
+// better
+
 app.post('/api/logout', (req, res) => {
   res.status(200).json({
     success: true,
