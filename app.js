@@ -3,6 +3,7 @@ require('dotenv').config();
 const mysql = require('mysql2');
 const multer = require('multer');
 const fs = require('fs');
+const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
@@ -22,6 +23,7 @@ const Cart = require('./models/Cart');
 const Product = require('./models/Product');
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // sequelize.authenticate()
