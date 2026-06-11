@@ -144,7 +144,7 @@ app.post('/login', async (req, res) => {
         role: user.role
       },
       'secretkey123', // later we move to .env
-      { expiresIn: '1h' }
+      { expiresIn: '7d' }
     );
 
     // 4. send response
