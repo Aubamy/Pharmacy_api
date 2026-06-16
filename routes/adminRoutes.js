@@ -9,6 +9,7 @@ const {
     dashboard
 } = require('../controllers/adminController');
 
+
 router.get('/users', auth, admin, getUsers);
 
 router.get('/products', auth, admin, getProducts);
