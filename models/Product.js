@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
+
 const Product = sequelize.define('Product', {
     id: {
         type: DataTypes.INTEGER,
@@ -38,4 +39,8 @@ const Product = sequelize.define('Product', {
     }
 });
 
+
+
 module.exports = Product;
+const Cart = require('./Cart');
+Product.hasMany(Cart, { foreignKey: 'productId' });

@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
+
 const Cart = sequelize.define('Cart', {
   userId: {
     type: DataTypes.INTEGER,
@@ -16,4 +17,8 @@ const Cart = sequelize.define('Cart', {
   }
 });
 
+// A cart item belongs to a Product
+
 module.exports = Cart;
+const Product = require('./Product');
+Cart.belongsTo(Product, { foreignKey: 'productId' });
