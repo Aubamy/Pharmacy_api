@@ -1,24 +1,26 @@
+const axios = require("axios");
 const Order = require('../models/Order');
 const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
 
 exports.checkout = async (req, res) => {
-
     try {
         const userId = req.user.id;
 
-        // 1. get cart items
-        const cartItems = await Cart.findAll({ where: { userId } });
+        const cartItems = await Cart.findAll({
+            where: { userId }
+        });
 
-        if (cartItems.length === 0) {
-            return res.status(400).json({ message: 'Cart is empty' });
+        if (!cartItems.length) {
+            return res.status(400).json({
+                message: "Cart is empty"
+            });
         }
 
         let totalAmount = 0;
 
-        // 2. calculate total
-        for (let item of cartItems) {
+        for (const item of cartItems) {
             const product = await Product.findByPk(item.productId);
 
             if (!product) continue;
@@ -26,18 +28,124 @@ exports.checkout = async (req, res) => {
             totalAmount += product.price * item.quantity;
         }
 
-        // 3. create order
         const order = await Order.create({
             userId,
             totalAmount,
-            status: 'pending'
+            status: "pending"
         });
 
-        // 4. create order items
-        for (let item of cartItems) {
-            const product = await Product.findByPk(item.productId);
+        res.status(200).json({
+            orderId: order.id,
+            totalAmount
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
+    }
+};
+
+exports.initializePayment = async (req, res) => {
+    try {
+
+        const { orderId } = req.body;
+
+        const order = await Order.findByPk(orderId);
+
+        if (!order) {
+            return res.status(404).json({
+                message: "Order not found"
+            });
+        }
+
+        const reference = `ORDER_${order.id}_${Date.now()}`;
+
+        order.paymentReference = reference;
+        await order.save();
+
+        const response = await axios.post(
+            "https://api.paystack.co/transaction/initialize",
+            {
+                email: req.user.email,
+                amount: order.totalAmount * 100,
+                reference
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+                }
+            }
+        );
+
+        return res.json({
+            paymentUrl: response.data.data.authorization_url,
+            reference: response.data.data.reference
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            message: error.message
+        });
+    }
+};
+
+
+exports.verifyPayment = async (req, res) => {
+
+    try {
+
+        const { reference } = req.params;
+
+        const response = await axios.get(
+            `https://api.paystack.co/transaction/verify/${reference}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+                }
+            }
+        );
+
+        const payment = response.data.data;
+
+        if (payment.status !== "success") {
+            return res.status(400).json({
+                message: "Payment failed"
+            });
+        }
+
+        const order = await Order.findOne({
+            where: {
+                paymentReference: payment.reference
+            }
+        });
+        if (!order) {
+            return res.status(404).json({
+                message: "Order not found"
+            });
+        }
+
+        order.status = "paid";
+        await order.save();
+
+        const cartItems = await Cart.findAll({
+            where: {
+                userId: order.userId
+            }
+        });
+
+        for (const item of cartItems) {
+
+            const product = await Product.findByPk(
+                item.productId
+            );
 
             if (!product) continue;
+
+            product.quantity -= item.quantity;
+
+            await product.save();
 
             await OrderItem.create({
                 orderId: order.id,
@@ -45,27 +153,27 @@ exports.checkout = async (req, res) => {
                 quantity: item.quantity,
                 price: product.price
             });
-
-            // optional: reduce stock
-            product.quantity -= item.quantity;
-            await product.save();
         }
 
-        // 5. clear cart
-        await Cart.destroy({ where: { userId } });
-
-        res.json({
-            message: 'Order placed successfully',
-            orderId: order.id,
-            totalAmount
+        await Cart.destroy({
+            where: {
+                userId: order.userId
+            }
         });
 
-    } catch (err) {
-        console.log(err);
-        res.status(500).send('Server error');
+        res.json({
+            success: true,
+            message: "Payment successful"
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: error.message
+        });
+
     }
 };
-
 
 
 exports.getOrders = async (req, res) => {

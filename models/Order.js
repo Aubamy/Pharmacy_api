@@ -12,10 +12,16 @@ const Order = sequelize.define('Order', {
         allowNull: false
     },
 
+    paymentReference: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+
     status: {
         type: DataTypes.STRING,
         defaultValue: 'pending' // pending, paid, delivered, cancelled
     }
+
 });
 
 module.exports = Order;

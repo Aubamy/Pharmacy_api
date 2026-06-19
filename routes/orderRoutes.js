@@ -4,12 +4,24 @@ const auth = require('../middleware/auth');
 
 const {
     checkout,
+    initializePayment,
+    verifyPayment,
     getOrders,
     getOrder,
     updateOrderStatus
 } = require('../controllers/orderController');
-
 router.post('/checkout', auth, checkout);
+
+router.post(
+    "/payment/initialize",
+    auth,
+    initializePayment
+);
+
+router.get(
+    "/payment/verify/:reference",
+    verifyPayment
+);
 
 router.get('/admin/orders', auth, getOrders);
 
