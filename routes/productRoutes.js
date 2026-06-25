@@ -16,7 +16,6 @@ router.get('/products', getAllProducts);
 router.post(
     '/add-products',
     auth,
-    admin,
     upload.single('image'),
     addProduct
 );
@@ -24,7 +23,6 @@ router.post(
 router.put(
     '/edit-products/:id',
     auth,
-    admin,
     upload.single('image'),
     editProduct
 );
@@ -32,7 +30,6 @@ router.put(
 router.delete(
     '/admin/products/:id',
     auth,
-    admin,
     deleteProduct
 );
 
