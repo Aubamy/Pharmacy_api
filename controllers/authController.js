@@ -53,7 +53,7 @@ exports.register = async (req, res) => {
         });
 
     } catch (err) {
-        console.log(err); // 👈 IMPORTANT
+        console.log(err); //  IMPORTANT
         res.status(500).send(err.message);
     }
 };
