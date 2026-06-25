@@ -30,6 +30,11 @@ exports.getAllProducts = async (req, res) => {
 exports.addProduct = async (req, res) => {
 
     try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                message: 'Access denied'
+            });
+        }
 
         const schema = Joi.object({
             productName: Joi.string().required(),
@@ -78,6 +83,12 @@ exports.addProduct = async (req, res) => {
 exports.editProduct = async (req, res) => {
 
     try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                message: 'Access denied'
+            });
+        }
+
         const id = req.params.id;
 
         const product = await Product.findByPk(id);
